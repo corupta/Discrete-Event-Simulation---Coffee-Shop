@@ -10,6 +10,7 @@
 class Barista : public Employee {
 public:
   Barista();
+  void newCustomer(Customer* customer) override; // override virtual function
 };
 
 

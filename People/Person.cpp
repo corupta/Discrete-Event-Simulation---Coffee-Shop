@@ -4,6 +4,8 @@
 
 #include "Person.h"
 
+unsigned int Person::increasingId = 0;
+
 Person::Person(PersonType personType) : personType(personType) {
   id = increasingId++;
 }
@@ -12,6 +14,6 @@ int Person::getPersonType() {
   return personType;
 }
 
-unsigned int Person::getId() {
+unsigned int Person::getComparisonId() {
   return id;
 }

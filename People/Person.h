@@ -10,7 +10,7 @@ enum PersonType {
 };
 
 class Person {
-  static unsigned int increasingId = 0;
+  static unsigned int increasingId;
   PersonType personType;
   unsigned int id;
 public:
@@ -18,7 +18,7 @@ public:
 
   int getPersonType();
 
-  unsigned int getId();
+  unsigned int getComparisonId();
 };
 
 

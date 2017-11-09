@@ -5,14 +5,20 @@
 #include <stdio.h>
 #include "Employee.h"
 
-Employee::Employee(PersonType personType) : Person(personType) {
-  currentCustomer = NULL;
+Employee::Employee(PersonType personType) : Person(personType), busyTime(0), currentCustomer(nullptr) {}
+
+void Employee::setEmployeeId(unsigned int newEmployeeId) {
+  employeeId = newEmployeeId;
+}
+
+unsigned int Employee::getEmployeeId() {
+  return employeeId;
 }
 
 Customer *Employee::getCurrentCustomer() {
   return currentCustomer;
 }
 
-void Employee::newCustomer(Customer *person) {
-  currentCustomer = person;
-};
+double Employee::getBusyTime() {
+  return busyTime;
+}

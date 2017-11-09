@@ -5,3 +5,8 @@
 #include "Cashier.h"
 
 Cashier::Cashier() : Employee(cashier) {}
+
+void Cashier::newCustomer(Customer *person) {
+  busyTime += person -> getOrder();
+  currentCustomer = person;
+};

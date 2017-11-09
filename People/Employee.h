@@ -7,14 +7,23 @@
 
 #include "Customer.h"
 
-class Employee : Person {
+class Employee : public Person {
+protected:
   Customer *currentCustomer;
+  unsigned int employeeId;
+  double busyTime;
 public:
-  Employee(PersonType);
+  explicit Employee(PersonType);
+
+  void setEmployeeId(unsigned int);
+
+  unsigned int getEmployeeId();
 
   Customer *getCurrentCustomer();
 
-  void newCustomer(Customer *);
+  virtual void newCustomer(Customer *) = 0; // pure virtual
+
+  double getBusyTime();
 };
 
 

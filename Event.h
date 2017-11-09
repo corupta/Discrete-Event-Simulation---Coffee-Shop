@@ -8,7 +8,6 @@
 
 #include "People/Person.h"
 
-template<typename T>
 class Event {
   double triggerTime;
   Person *person;
