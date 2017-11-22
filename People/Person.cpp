@@ -7,7 +7,7 @@
 unsigned int Person::increasingId = 0;
 
 Person::Person(PersonType personType) : personType(personType) {
-  id = increasingId++;
+  comparisonId = increasingId++;
 }
 
 int Person::getPersonType() {
@@ -15,5 +15,5 @@ int Person::getPersonType() {
 }
 
 unsigned int Person::getComparisonId() {
-  return id;
+  return comparisonId;
 }

@@ -2,12 +2,14 @@
 // Created by corupta on 08.11.2017.
 //
 
-// todo fix read & write file
-
 #include <bits/stdc++.h>
 
 using namespace std;
 
+// I tried to make this program as OOP as possible, for clarity and for fun.
+// I believe reading the comments in main only is enough to understand the whole mechanism,
+// so I'd suggest reading other classes only to check out my implementations of those classes.
+// I mean, there's no need to check out other classes before understanding this main file.
 #include "People/Customer.h"
 #include "People/Cashier.h"
 #include "People/Barista.h"
@@ -18,19 +20,32 @@ using namespace std;
 
 
 /*
- * 1 OrderQueue
- * 1 BrewQueue
+ * Solution Model 1
+ * There is 1 OrderQueue
+ * There is 1 BrewQueue
+ *
+ * takes a file variable as a parameter to print the solution's result,
+ * takes the number of cashiers, N
+ * takes a customers vector, tries the solution using it, but does not alter the customers vector.
  */
-void solutionModel1(ostream &os, int N, vector<Customer *> & customers) {
+void solutionModel1(FILE *fout, int N, vector<Customer *> &customers) {
+  // Event queue is a priority queue, to get the next occuring event, and push new events.
+  // Check out its class for more details.
   EventQueue eventQueue;
   for (unsigned int i = 0; i < customers.size(); ++i) {
+    // push a new event for each customer's arrival
     eventQueue.pushEvent(customers[i], customers[i]->getArrival());
   }
+  // there are N cashiers, and N / 3 baristas
   Cashier cashiers[N];
   Barista baristas[N / 3];
+  // IdMinHeap is a Priority Queue, that gives the next available cashier/barista id with the smallest value.
   IdMinHeap readyCashiers, readyBaristas;
+  // OrderQueue is a fifo queue for customers, that have arrived and are waiting for a cashier.
   OrderQueue orderQueue;
+  // BrewQueue is a priority queue for customers (according to the price of their orders), that have arrived and are waiting for a barista.
   BrewQueue brewQueue;
+  // initially, push each employee to the readyCashiers/Baristas queues.
   for (unsigned int i = 0; i < N; ++i) {
     readyCashiers.push(i);
     cashiers[i].setEmployeeId(i);
@@ -39,105 +54,161 @@ void solutionModel1(ostream &os, int N, vector<Customer *> & customers) {
       baristas[i].setEmployeeId(i);
     }
   }
+  // iterate until all events are done.
   while (!eventQueue.empty()) {
-    //cerr << "outside loop starts" << endl;
+    // simultaneous events happen in this do while block
     do {
-      //cerr << "inner loop starts" << endl;
-      //eventQueue.dumpShit();
+      // ###################### AN EVENT STARTS ######################
+      // an Employee, and Customer declarations, to be used when needed.
+      Employee *employee;
+      Customer *currCustomer;
+      // get next event
       Event *event = eventQueue.popEvent();
-      //eventQueue.dumpShit();
+      // get the person of that event.
       Person *person = event->getPerson();
-      Employee * employee;
-      Customer* currCustomer;
-      if (person -> getPersonType() == customer) {
-        // customer arrives
-        //cerr << "customer arrives" << endl;
-        currCustomer = (Customer*)person;
 
-        // handle cashier event
+      // get the type of person in the event, to determine what event is it
+      // customer means arrival of that customer
+      // cashier means that cashier finished an order
+      // barista means that barista finished a brew
+
+      if (person->getPersonType() == customer) {
+        // ###################### CUSTOMER EVENT STARTS ######################
+        // customer arrives
+        currCustomer = (Customer *) person;
+
+        // handle cashier event for new customer
         if (readyCashiers.empty()) {
+          // there are no ready cashiers
           orderQueue.pushCustomer(currCustomer);
         } else {
+          // cashier with the following id is assigned to the customer
           int cashierId = readyCashiers.pop();
           cashiers[cashierId].newCustomer(currCustomer);
-          eventQueue.pushEvent(&cashiers[cashierId], currCustomer -> getOrder());
+          // an event is created for when this cashier finishes the order.
+          eventQueue.pushEvent(&cashiers[cashierId], currCustomer->getOrder());
         }
+        // ###################### CUSTOMER EVENT ENDS ######################
       } else {
+        // ###################### EMPLOYEE EVENT STARTS ######################
         // order or brew finishes
-        employee = (Employee *)person;
-        currCustomer = employee -> getCurrentCustomer();
 
-        if (person -> getPersonType() == cashier) {
-          // order finishes
-          //cerr << "order finishes" << endl;
+        // person is either a cashier or a barista
+        employee = (Employee *) person;
 
-          // handle cashier
+        // currCustomer is the customer assigned to that employee
+        currCustomer = employee->getCurrentCustomer();
+
+        if (person->getPersonType() == cashier) {
+          // ###################### CASHIER EVENT STARTS ######################
+          // a cashier finishes an order
+
+          // handle freed cashier, assign it to a new customer
           if (orderQueue.empty()) {
-            readyCashiers.push((employee -> getEmployeeId()));
+            // there are no customers waiting in the order queue
+            readyCashiers.push((employee->getEmployeeId()));
           } else {
-            Customer* nextCustomer = orderQueue.popCustomer();
-            employee -> newCustomer(nextCustomer);
-            eventQueue.pushEvent(employee, nextCustomer -> getOrder());
+            // assign the cashier to the next customer in the order queue
+            Customer *nextCustomer = orderQueue.popCustomer();
+            employee->newCustomer(nextCustomer);
+            // an event is created for when this cashier finishes the order.
+            eventQueue.pushEvent(employee, nextCustomer->getOrder());
           }
 
-          // handle barista event
+          // handle barista event for the customer
           if (readyBaristas.empty()) {
+            // there are no ready baristas
             brewQueue.pushCustomer(currCustomer);
           } else {
+            // barista with the following id is assigned to the customer
             int baristaId = readyBaristas.pop();
             baristas[baristaId].newCustomer(currCustomer);
-            eventQueue.pushEvent(&baristas[baristaId], currCustomer -> getBrew());
+            // an event is created for when this barista finishes the brew
+            eventQueue.pushEvent(&baristas[baristaId], currCustomer->getBrew());
           }
+          // ###################### CASHIER EVENT ENDS ######################
         } else { // person -> getPersonType() == barista
-          // brew finishes
-          //cerr << "brew finishes" << endl;
-          // handle barista
+          // ###################### BARISTA EVENT STARTS ######################
+          // a barista finishes a brew
+
+          // handle freed barista, assign it to a new customer
           if (brewQueue.empty()) {
+            // there are no customers waiting in the brew queue
             readyBaristas.push((employee->getEmployeeId()));
           } else {
-            Customer* nextCustomer = brewQueue.popCustomer();
-            employee -> newCustomer(nextCustomer);
-            eventQueue.pushEvent(employee, nextCustomer -> getBrew());
+            // assign the barista to the next customer in the brew queue
+            Customer *nextCustomer = brewQueue.popCustomer();
+            employee->newCustomer(nextCustomer);
+            // an event is created for when this barista finishes the brew.
+            eventQueue.pushEvent(employee, nextCustomer->getBrew());
           }
 
-          // handle finish event
-          currCustomer -> setFinish(eventQueue.getCurrentTime());
+          // both the order and the brew of the current customer is finished
+          // set the finish time of that customer
+          currCustomer->setFinish(eventQueue.getCurrentTime());
+          // ###################### BARISTA EVENT ENDS ######################
         }
+        // ###################### EMPLOYEE EVENT ENDS ######################
       }
       delete event;
+      // ######################  AN EVENT ENDS ######################
+      // if the next event is simultaneous do the next event also.
     } while (eventQueue.doNextAlso());
-    //cerr << "inner loop ends" << endl;
+
+    // simultaneous events are completed,
+    // check the current length of the order queue and the brew queue.
     orderQueue.updateMaxLen();
     brewQueue.updateMaxLen();
   }
-  //cerr << "outer loop ends" << endl;
+  // all events are finished.
+
+  // print the results of this solution model
   double totalTime = eventQueue.getCurrentTime();
-  printf("%.2lf\n", totalTime); // total running time
-  printf("%u\n", orderQueue.getMaxLen()); // maximum length of the cashier queue
-  printf("%u\n", brewQueue.getMaxLen()); // maximum length of the barista queue
+  fprintf(fout, "%.2lf\n", totalTime); // total running time
+  fprintf(fout, "%u\n", orderQueue.getMaxLen()); // maximum length of the cashier queue
+  fprintf(fout, "%u\n", brewQueue.getMaxLen()); // maximum length of the barista queue
   for (int i = 0; i < N; ++i) {
-    printf("%.2lf\n", cashiers[i].getBusyTime() / totalTime); // utilizations of the cashiers
+    fprintf(fout, "%.2lf\n", cashiers[i].getBusyTime() / totalTime); // utilizations of the cashiers
   }
   for (int i = 0; i < N / 3; ++i) {
-    printf("%.2lf\n", baristas[i].getBusyTime() / totalTime); // utilization of the baristas
+    fprintf(fout, "%.2lf\n", baristas[i].getBusyTime() / totalTime); // utilization of the baristas
   }
   for (int i = 0; i < customers.size(); ++i) {
-    printf("%.2lf\n", customers[i]->getTurnaround()); // turnaround times of orders
+    fprintf(fout, "%.2lf\n", customers[i]->getTurnaround()); // turnaround times of orders
   }
 }
 
-// 1 OrderQueue
-// N/3 BreqQueue
-void solutionModel2(ostream &os, int N, vector<Customer *> & customers) {
+/*
+ * Solution Model 2
+ * There is 1 OrderQueue
+ * There is N / 3 BrewQueue
+ *
+ * takes a file variable as a parameter to print the solution's result,
+ * takes the number of cashiers, N
+ * takes a customers vector, tries the solution using it, but does not alter the customers vector.
+ */
+void solutionModel2(FILE *fout, int N, vector<Customer *> &customers) {
+  // Event queue is a priority queue, to get the next occuring event, and push new events.
+  // Check out its class for more details.
   EventQueue eventQueue;
   for (unsigned int i = 0; i < customers.size(); ++i) {
+    // push a new event for each customer's arrival
     eventQueue.pushEvent(customers[i], customers[i]->getArrival());
   }
+  // there are N cashiers, and N / 3 baristas
   Cashier cashiers[N];
   Barista baristas[N / 3];
+  // IdMinHeap is a Priority Queue, that gives the next available cashier/barista id with the smallest value.
+  // In this solution model, there can be only 1 id in each readyBaristas queue,
+  // because each baristas assigned to the customers coming from 3 specific cashiers.
+  // (except the last barista who is assigned to customers coming from 1 specific cashier)
   IdMinHeap readyCashiers, readyBaristas[N / 3];
+  // OrderQueue is a fifo queue for customers, that have arrived and are waiting for a cashier.
   OrderQueue orderQueue;
+  // BrewQueue is a priority queue for customers (according to the price of their orders), that have arrived and are waiting for a barista.
+  // There are N / 3 brew queues, for each barista in this solution model.
   BrewQueue brewQueue[N / 3];
+  // initially, push each employee to the readyCashiers/Baristas queues.
   for (unsigned int i = 0; i < N; ++i) {
     readyCashiers.push(i);
     cashiers[i].setEmployeeId(i);
@@ -146,184 +217,173 @@ void solutionModel2(ostream &os, int N, vector<Customer *> & customers) {
       baristas[i].setEmployeeId(i);
     }
   }
+  // iterate until all events are done.
   while (!eventQueue.empty()) {
-    //cerr << "outside loop starts" << endl;
+    // simultaneous events happen in this do while block
     do {
-      //cerr << "inner loop starts" << endl;
-      //eventQueue.dumpShit();
+      // ###################### AN EVENT STARTS ######################
+      // an Employee, and Customer declarations, to be used when needed.
+      Employee *employee;
+      Customer *currCustomer;
+      // get next event
       Event *event = eventQueue.popEvent();
-      //eventQueue.dumpShit();
+      // get the person of that event.
       Person *person = event->getPerson();
-      Employee * employee;
-      Customer* currCustomer;
-      if (person -> getPersonType() == customer) {
-        // customer arrives
-        //cerr << "customer arrives" << endl;
-        currCustomer = (Customer*)person;
 
-        // handle cashier event
+      // get the type of person in the event, to determine what event is it
+      // customer means arrival of that customer
+      // cashier means that cashier finished an order
+      // barista means that barista finished a brew
+
+      if (person->getPersonType() == customer) {
+        // ###################### CUSTOMER EVENT STARTS ######################
+        // customer arrives
+        currCustomer = (Customer *) person;
+
+        // handle cashier event for new customer
         if (readyCashiers.empty()) {
+          // there are no ready cashiers
           orderQueue.pushCustomer(currCustomer);
         } else {
+          // cashier with the following id is assigned to the customer
           int cashierId = readyCashiers.pop();
           cashiers[cashierId].newCustomer(currCustomer);
-          eventQueue.pushEvent(&cashiers[cashierId], currCustomer -> getOrder());
+          // an event is created for when this cashier finishes the order.
+          eventQueue.pushEvent(&cashiers[cashierId], currCustomer->getOrder());
         }
+        // ###################### CUSTOMER EVENT ENDS ######################
       } else {
+        // ###################### EMPLOYEE EVENT STARTS ######################
         // order or brew finishes
-        employee = (Employee *)person;
-        currCustomer = employee -> getCurrentCustomer();
 
-        if (person -> getPersonType() == cashier) {
-          // order finishes
-          //cerr << "order finishes" << endl;
+        // person is either a cashier or a barista
+        employee = (Employee *) person;
 
-          // handle cashier
+        // currCustomer is the customer assigned to that employee
+        currCustomer = employee->getCurrentCustomer();
+
+        if (person->getPersonType() == cashier) {
+          // ###################### CASHIER EVENT STARTS ######################
+          // a cashier finishes an order
+
+          // handle freed cashier, assign it to a new customer
           if (orderQueue.empty()) {
-            readyCashiers.push((employee -> getEmployeeId()));
+            // there are no customers waiting in the order queue
+            readyCashiers.push((employee->getEmployeeId()));
           } else {
-            Customer* nextCustomer = orderQueue.popCustomer();
-            employee -> newCustomer(nextCustomer);
-            eventQueue.pushEvent(employee, nextCustomer -> getOrder());
+            // assign the cashier to the next customer in the order queue
+            Customer *nextCustomer = orderQueue.popCustomer();
+            employee->newCustomer(nextCustomer);
+            // an event is created for when this cashier finishes the order.
+            eventQueue.pushEvent(employee, nextCustomer->getOrder());
           }
 
-          // get id of barista queue
-          unsigned int baristaQueueId = (employee -> getEmployeeId()) / 3;
+          // get the id of barista queue for the customer which is the cashier id / 3
+          unsigned int baristaQueueId = (employee->getEmployeeId()) / 3;
 
-          // handle barista event
+          // handle barista event for the customer
           if (readyBaristas[baristaQueueId].empty()) {
+            // there are no ready baristas with that id. (the barista with that id is not available)
             brewQueue[baristaQueueId].pushCustomer(currCustomer);
           } else {
+            // barista with the following id is assigned to the customer
             int baristaId = readyBaristas[baristaQueueId].pop();
             baristas[baristaId].newCustomer(currCustomer);
-            eventQueue.pushEvent(&baristas[baristaId], currCustomer -> getBrew());
+            // an event is created for when this barista finishes the brew
+            eventQueue.pushEvent(&baristas[baristaId], currCustomer->getBrew());
           }
+          // ###################### CASHIER EVENT ENDS ######################
         } else { // person -> getPersonType() == barista
-          // brew finishes;
+          /// ###################### BARISTA EVENT STARTS ######################
+          // a barista finishes a brew
 
-          // get id of barista queue
-          unsigned int baristaQueueId = employee -> getEmployeeId();
+          // get the id of that barista
+          unsigned int baristaQueueId = employee->getEmployeeId();
 
-          // handle barista
+          // handle freed barista, assign it to a new customer
           if (brewQueue[baristaQueueId].empty()) {
+            // there are no customers waiting in the brew queue
             readyBaristas[baristaQueueId].push((employee->getEmployeeId()));
           } else {
-            Customer* nextCustomer = brewQueue[baristaQueueId].popCustomer();
-            employee -> newCustomer(nextCustomer);
-            eventQueue.pushEvent(employee, nextCustomer -> getBrew());
+            // assign the barista to the next customer in the related brew queue
+            Customer *nextCustomer = brewQueue[baristaQueueId].popCustomer();
+            employee->newCustomer(nextCustomer);
+            // an event is created for when this barista finishes the brew.
+            eventQueue.pushEvent(employee, nextCustomer->getBrew());
           }
 
-          // handle finish event
-          currCustomer -> setFinish(eventQueue.getCurrentTime());
+          // both the order and the brew of the current customer is finished
+          // set the finish time of that customer
+          currCustomer->setFinish(eventQueue.getCurrentTime());
+          // ###################### BARISTA EVENT ENDS ######################
         }
+        // ###################### EMPLOYEE EVENT ENDS ######################
       }
       delete event;
+      // ######################  AN EVENT ENDS ######################
+      // if the next event is simultaneous do the next event also.
     } while (eventQueue.doNextAlso());
-    //cerr << "inner loop ends" << endl;
+
+    // simultaneous events are completed,
+    // check the current length of the order queue and the brew queues.
     orderQueue.updateMaxLen();
     for (int i = 0; i < N / 3; ++i) {
       brewQueue[i].updateMaxLen();
     }
   }
-  //cerr << "outer loop ends" << endl;
+  // all events are finished.
+
+  // print the results of this solution model
   double totalTime = eventQueue.getCurrentTime();
-  printf("%.2lf\n", totalTime); // total running time
-  printf("%u\n", orderQueue.getMaxLen()); // maximum length of the cashier queue
+  fprintf(fout, "%.2lf\n", totalTime); // total running time
+  fprintf(fout, "%u\n", orderQueue.getMaxLen()); // maximum length of the cashier queue
   for (int i = 0; i < N / 3; ++i) {
-    printf("%u\n", brewQueue[i].getMaxLen()); // maximum length of the barista queue
+    fprintf(fout, "%u\n", brewQueue[i].getMaxLen()); // maximum length of the barista queue
   }
   for (int i = 0; i < N; ++i) {
-    printf("%.2lf\n", cashiers[i].getBusyTime() / totalTime); // utilizations of the cashiers
+    fprintf(fout, "%.2lf\n", cashiers[i].getBusyTime() / totalTime); // utilizations of the cashiers
   }
   for (int i = 0; i < N / 3; ++i) {
-    printf("%.2lf\n", baristas[i].getBusyTime() / totalTime); // utilization of the baristas
+    fprintf(fout, "%.2lf\n", baristas[i].getBusyTime() / totalTime); // utilization of the baristas
   }
   for (int i = 0; i < customers.size(); ++i) {
-    printf("%.2lf\n", customers[i]->getTurnaround()); // turnaround times of orders
+    fprintf(fout, "%.2lf\n", customers[i]->getTurnaround()); // turnaround times of orders
   }
 }
 
 
-int main() {
+int main(int argc, char *argv[]) {
+
+  // check argc & argv
+  if (argc != 3) {
+    cout << "Run the code with the following command: ./project2 [input_file] [output_file]" << endl;
+    return 1;
+  }
+
+  // open filestreams
+  ifstream infile(argv[1]);
+  FILE *fout = fopen(argv[2], "w");
+
+  // definitions N is number of cashiers, m is number of customers
   int N, m;
   double arrival, order, brew, price;
-  cin >> N >> m;
-  vector<Customer*> customers;
+  vector<Customer *> customers;
+
+  // read input: N, m and customer data
+  infile >> N >> m;
   while (m--) {
-    cin >> arrival >> order >> brew >> price;
+    infile >> arrival >> order >> brew >> price;
     customers.push_back(new Customer(arrival, order, brew, price));
   }
-  solutionModel1(cout, N, customers);
-  cout << endl;
-  solutionModel2(cout, N, customers);
-  // Customer a;
+
+  // try the solution model 1, print its results.
+  solutionModel1(fout, N, customers);
+  // print an endline between the solutions
+  fprintf(fout, "\n");
+  // try the solution model 2, print its results.
+  solutionModel2(fout, N, customers);
+
+  // close filestreams
+  infile.close();
+  fclose(fout);
 }
-
-
-/*
-
-
- sample input
-
-6
-10
-0 20.75 24.89 10.30
-3.21 22.47 18.12 7.57
-5.17 19.83 32.35 13.93
-8.16 21.10 11.32 25.95
-9.54 26.05 17.14 8.15
-10.32 11.10 14.08 3.74
-16.47 34.68 41.41 16.98
-23.13 17.33 16.22 9.86
-27.52 40.68 23.43 20.97
-28.08 16.80 30.47 11.32
-
-
- sample output
-
-137.52
-1
-5
-0.40
-0.46
-0.27
-0.15
-0.19
-0.21
-0.85
-0.82
-45.64
-134.31
-72.82
-38.66
-124.54
-25.18
-102.93
-93.81
-73.20
-49.21
-
-191.42
-1
-4
-2
-0.29
-0.33
-0.19
-0.11
-0.14
-0.15
-0.89
-0.31
-45.64
-188.21
-72.82
-38.66
-70.64
-25.18
-126.36
-39.91
-73.90
-145.22
-
- */

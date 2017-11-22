@@ -4,13 +4,15 @@
 
 #include "EventQueue.h"
 
-#define EPSILON (1.0E-8)
-
 EventQueue::EventQueue() : currentTime(0) {}
+
+bool EventQueue::eventsAreSimultaneous(double timeA, double timeB) {
+  return (timeA + EPSILON > timeB && timeA < timeB + EPSILON);
+}
 
 bool EventQueue::CompareEvent::operator()(Event *a, Event *b) {
   // return true if a should happen later (time is bigger, or id)
-  if (a->getTime() == b->getTime()) {
+  if (eventsAreSimultaneous(a->getTime(), b->getTime())) {
     return a->getPerson()->getComparisonId() > b->getPerson()->getComparisonId();
   }
   return a->getTime() > b->getTime();
@@ -32,22 +34,15 @@ double EventQueue::getCurrentTime() {
   return currentTime;
 }
 
+
 bool EventQueue::doNextAlso() {
   if (!eventQueue.empty()) {
     double nextTime = eventQueue.top()->getTime();
-    if (nextTime + EPSILON > currentTime && nextTime < currentTime + EPSILON) {
-      return true;
-    }
+    return eventsAreSimultaneous(currentTime, nextTime);
   }
   return false;
 }
 
 bool EventQueue::empty() {
   return eventQueue.empty();
-}
-
-using namespace std;
-#include <iostream>
-void EventQueue::dumpShit() {
-  cerr << "Dump EventQueue: Time(" << currentTime << ") currentSize(" << eventQueue.size() << ")" << endl;
 }

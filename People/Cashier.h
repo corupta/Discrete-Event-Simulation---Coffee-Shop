@@ -7,9 +7,14 @@
 
 #include "Employee.h"
 
+// inherits from the employee class
 class Cashier : public Employee {
 public:
+  // constructor cosntructs the employee parent with the cashier person type
   Cashier();
+
+  // assigns the customer as the current customer of the current employee
+  // increases the busytime by the order time of the customer.
   void newCustomer(Customer* customer) override; // override virtual function
 };
 
