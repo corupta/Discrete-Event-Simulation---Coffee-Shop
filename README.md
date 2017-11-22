@@ -1,3 +1,43 @@
+I tried to make this program as OOP as possible, for clarity and for fun.
+
+I believe reading the comments in main only is enough to understand the whole mechanism,
+so I'd suggest reading other classes only to check out my implementations of those classes.
+
+I mean, there's no need to check out other classes before understanding this main file.
+
+Below is an overview of those classes:
+
+### People
+* Person is a base class.
+    * Employee inherits from the Person
+        * Cashier inherits from the Employee
+        * Barista inherits from the Employee
+    * Customer inherits from the Person
+
+### Event is either customer arrives, cashier finishes order, or barista finishes brew.
+Event is a class with one Person and one triggerTime.
+* if the person is of type customer => event is customer arrives.
+* if the person is of type cashier => event is cashier finishes order.
+* if the person is of type barista => event is barista finishes brew.
+
+### Queues
+* OrderQueue for customers waiting for order
+* BrewQueue for customers waiting for brew
+* EventQueue to detect next occuring event.
+
+### IdMinHeap is just a priority queue in reverse direction (minheap instead of maxheap)
+Used to determine, which available cashier/barista has the lowest id.
+
+
+
+
+### _Tried & Committed Test Cases sent via mail._
+
+Note: the test cases have windows endlines(\r\n) but my program puts linux endlines in the output(\n),
+except for that outputs in the sample tests were identical to my outputs.
+
+
+
 # CMPE250_2017Fall_Project2
 
 Due date: 23.11.2017 23:59
