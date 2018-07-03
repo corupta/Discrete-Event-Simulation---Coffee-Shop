@@ -3,7 +3,7 @@
 
 ## Project Details
 
-That's a project I've created as a university homework for the course, CMPE 250 - Data Structures and Algorithms on April 22nd, 2018.
+That's a project I've created as a university homework for the course, CMPE 250 - Data Structures and Algorithms on Nov 22nd, 2017.
 
 What the project is about can be found via [Project2.pdf](https://github.com/corupta/Discrete-Event-Simulation---Coffee-Shop/blob/master/Project2.pdf)
 
